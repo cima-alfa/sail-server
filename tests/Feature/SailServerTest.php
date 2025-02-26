@@ -60,6 +60,22 @@ class SailServerTest extends TestCase
         $response->assertSee('bash -c "laravel new example-app --no-interaction && cd example-app && php ./artisan sail:install --with=pgsql --devcontainer"', false);
     }
 
+    public function test_it_adds_the_starter_kit_upon_request()
+    {
+        $response = $this->get('/example-app?with=pgsql&kit=react');
+
+        $response->assertStatus(200);
+        $response->assertSee('bash -c "laravel new example-app --react --no-interaction && cd example-app && php ./artisan sail:install --with=pgsql "', false);
+    }
+
+    public function test_it_adds_the_workos_upon_request()
+    {
+        $response = $this->get('/example-app?with=pgsql&workos');
+
+        $response->assertStatus(200);
+        $response->assertSee('bash -c "laravel new example-app --workos --no-interaction && cd example-app && php ./artisan sail:install --with=pgsql "', false);
+    }
+
     public function test_it_does_not_accepts_domains_with_a_dot()
     {
         $response = $this->get('/foo.test');
@@ -106,5 +122,21 @@ class SailServerTest extends TestCase
 
         $response->assertStatus(400);
         $response->assertSee('Invalid service name. Please provide one or more of the supported services (mysql, pgsql, mariadb, redis, valkey, memcached, meilisearch, typesense, minio, mailpit, selenium, soketi) or "none".', false);
+    }
+
+    public function test_it_does_not_accept_empty_kit_query_when_present()
+    {
+        $response = $this->get('/example-app?kit');
+
+        $response->assertStatus(400);
+        $response->assertSee('Invalid starter kit name. Please provide one of the supported starter kits (react, vue, livewire).', false);
+    }
+
+    public function test_it_does_not_accept_invalid_starter_kits()
+    {
+        $response = $this->get('/example-app?kit=invalid_starter_kit');
+
+        $response->assertStatus(400);
+        $response->assertSee('Invalid starter kit name. Please provide one of the supported starter kits (react, vue, livewire).', false);
     }
 }

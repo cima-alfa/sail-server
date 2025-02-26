@@ -25,9 +25,17 @@ Route::get('/{name}', function (Request $request, $name) {
         'soketi',
     ];
 
+    $availableStarterKits = [
+        'react',
+        'vue',
+        'livewire',
+    ];
+
     $php = $request->query('php', '84');
 
     $with = array_unique(explode(',', $request->query('with', 'mysql,redis,meilisearch,mailpit,selenium')));
+
+    $kit = $request->query('kit');
 
     try {
         Validator::validate(
@@ -35,6 +43,7 @@ Route::get('/{name}', function (Request $request, $name) {
                 'name' => $name,
                 'php' => $php,
                 'with' => $with,
+                'kit' => $kit,
             ],
             [
                 'name' => 'string|alpha_dash',
@@ -45,6 +54,7 @@ Route::get('/{name}', function (Request $request, $name) {
                     'string',
                     count($with) === 1 && in_array('none', $with) ? Rule::in(['none']) : Rule::in($availableServices)
                 ],
+                'kit' => [$request->has('kit') ? 'required' : 'nullable', 'string', Rule::in($availableStarterKits)],
             ]
         );
     } catch (ValidationException $e) {
@@ -61,6 +71,20 @@ Route::get('/{name}', function (Request $request, $name) {
         if (array_key_exists('with', $errors)) {
             return response('Invalid service name. Please provide one or more of the supported services ('.implode(', ', $availableServices).') or "none".', 400);
         }
+        
+        if (array_key_exists('kit', $errors)) {
+            return response('Invalid starter kit name. Please provide one of the supported starter kits ('.implode(', ', $availableStarterKits).').', 400);
+        }
+    }
+
+    $options = '';
+
+    if ($kit !== null) {
+        $options .= "--$kit ";
+    }
+
+    if ($request->has('workos')) {
+        $options .= '--workos ';
     }
 
     $services = implode(' ', $with);
@@ -70,8 +94,8 @@ Route::get('/{name}', function (Request $request, $name) {
     $devcontainer = $request->has('devcontainer') ? '--devcontainer' : '';
 
     $script = str_replace(
-        ['{{ php }}', '{{ name }}', '{{ with }}', '{{ devcontainer }}', '{{ services }}'],
-        [$php, $name, $with, $devcontainer, $services],
+        ['{{ php }}', '{{ name }}', '{{ options }}', '{{ with }}', '{{ devcontainer }}', '{{ services }}'],
+        [$php, $name, $options, $with, $devcontainer, $services],
         file_get_contents(resource_path('scripts/php.sh'))
     );
 
